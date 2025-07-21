@@ -1,42 +1,45 @@
-#!/bin/bash
-# === 正确配置参数 ===
-export CM_API_KEY="YRAU6tGcqouHDJ-AmbQi8A-aoU1pHsDMMR3ZQUJalSI"
-export CM_APP_ID="687e3ce724817b83deea48d7"      # 来自您的链接
+workflows:
+  my-workflow:
+    name: My Workflow
+    environment:
+      vars:
+        CM_API_KEY: $CM_API_KEY
+        CM_APP_ID: $CM_APP_ID
+        CM_WORKFLOW_ID: $CM_WORKFLOW_ID   # 或者直接写死
+        IPA_PATH: $IPA_PATH   # 这些变量可以在Codemagic的环境变量中设置
+    scripts:
+      - name: Build and Upload
+        script: |
+          RESPONSE=$(curl -X POST \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $CM_API_KEY" \
+            -d '{
+              "appId": "'"$CM_APP_ID"'",
+              "workflowId": "'"$CM_WORKFLOW_ID"'",
+              "branch": "main",
+              "environment": {
+                "variables": {
+                  "IOS_SIGNING_TYPE": "development"
+                }
+              }
+            }' \
+            "https://api.codemagic.io/builds"
+          )
 
-# === 修复JSON语法错误 ===
-RESPONSE=$(curl -X POST \
-  -H "Content-Type: application/json" \  # ✅ 大写H，正确引号
-  -H "Authorization: Bearer $CM_API_KEY" \
-  -d '{
-    "appId": "'"$CM_APP_ID"'",
-    "workflowId": "'"$CM_WORKFLOW_ID"'",
-    "branch": "main",
-    "environment": {
-      "variables": {
-        "IOS_SIGNING_TYPE": "development"
-      }
-    }
-  }' \
-  "https://api.codemagic.io/builds"
-)
+          BUILD_ID=$(echo "$RESPONSE" | jq -r '.buildId')
 
-# === 处理JSON响应 ===
-BUILD_ID=$(echo "$RESPONSE" | jq -r '.buildId')
+          if [ -z "$BUILD_ID" ] || [ "$BUILD_ID" = "null" ]; then
+            echo "❌ 构建启动失败! 错误信息:"
+            echo "$RESPONSE" | jq .
+            exit 1
+          fi
 
-# === 增强错误处理 ===
-if [ -z "$BUILD_ID" ] || [ "$BUILD_ID" = "null" ]; then
-  echo "❌ 构建启动失败! 错误信息:"
-  echo "$RESPONSE" | jq .
-  exit 1
-fi
+          echo "✅ 构建已启动! ID: $BUILD_ID"
+          echo "👉 查看构建状态: https://codemagic.io/app/$CM_APP_ID/build/$BUILD_ID"
 
-echo "✅ 构建已启动! ID: $BUILD_ID"
-echo "👉 查看构建状态: https://codemagic.io/app/$CM_APP_ID/build/$BUILD_ID"
+          curl -X POST \
+            -H "Authorization: Bearer $CM_API_KEY" \
+            -F "file=@$IPA_PATH" \
+            "https://api.codemagic.io/builds/$BUILD_ID/artifacts"
 
-# === 上传IPA ===
-curl -X POST \
-  -H "Authorization: Bearer $CM_API_KEY" \
-  -F "file=@$IPA_PATH" \
-  "https://api.codemagic.io/builds/$BUILD_ID/artifacts"
-
-echo "✅ IPA文件上传完成"
+          echo "✅ IPA文件上传完成"
