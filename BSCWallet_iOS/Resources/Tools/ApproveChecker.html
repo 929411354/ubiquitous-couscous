@@ -1,1 +1,301 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>代币授权检查器</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+        
+        body {
+            padding: 20px;
+            background-color: #f5f5f7;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            overflow: hidden;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #3498db 0%, #2c3e50 100%);
+            padding: 20px;
+            text-align: center;
+            color: white;
+        }
+        
+        h1 {
+            font-size: 22px;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        
+        .subtitle {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 20px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            font-size: 16px;
+        }
+        
+        input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: 12px;
+            font-size: 16px;
+            background: #fafafa;
+        }
+        
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 17px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .btn:hover {
+            background: #2980b9;
+        }
+        
+        .result {
+            margin-top: 25px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            display: none;
+        }
+        
+        .result-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #3498db;
+        }
+        
+        .approval-item {
+            padding: 15px;
+            margin-bottom: 15px;
+            border: 1px solid #e0e0e0;
+            border-radius: 12px;
+            background: white;
+        }
+        
+        .token-info {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .token-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin-right: 10px;
+            background: #f0f0f0;
+        }
+        
+        .token-name {
+            font-weight: 600;
+        }
+        
+        .approval-details {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #f0f0f0;
+        }
+        
+        .detail-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+        
+        .detail-label {
+            color: #666;
+        }
+        
+        .detail-value {
+            font-weight: 500;
+        }
+        
+        .revoke-btn {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            background: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>代币授权检查器</h1>
+            <div class="subtitle">检查并管理您的代币授权</div>
+        </header>
+        
+        <div class="content">
+            <div class="form-group">
+                <label for="walletAddress">钱包地址</label>
+                <input type="text" id="walletAddress" placeholder="输入您的钱包地址">
+            </div>
+            
+            <button class="btn" onclick="checkApprovals()">检查授权</button>
+            
+            <div class="result" id="result">
+                <div class="result-title">授权列表</div>
+                <div id="approvalsList"></div>
+            </div>
+        </div>
+    </div>
 
+    <script>
+        // 示例数据 - 实际应用中应从区块链获取
+        const approvalsData = [
+            {
+                token: {
+                    name: "USDT",
+                    symbol: "USDT",
+                    address: "0x55d398326f99059fF775485246999027B3197955",
+                    icon: "https://assets.coingecko.com/coins/images/325/large/Tether.png"
+                },
+                spender: {
+                    name: "PancakeSwap",
+                    address: "0x10ED43C718714eb63d5aA57B78B54704E256024E"
+                },
+                amount: "Unlimited",
+                date: "2023-05-15"
+            },
+            {
+                token: {
+                    name: "BUSD",
+                    symbol: "BUSD",
+                    address: "0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56",
+                    icon: "https://assets.coingecko.com/coins/images/9576/large/BUSD.png"
+                },
+                spender: {
+                    name: "Venus Protocol",
+                    address: "0x94d1820b2D1c7c7452A163983Dc888CEC546b77D"
+                },
+                amount: "5000",
+                date: "2023-04-22"
+            },
+            {
+                token: {
+                    name: "CAKE",
+                    symbol: "CAKE",
+                    address: "0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82",
+                    icon: "https://assets.coingecko.com/coins/images/12632/large/pancakeswap-cake-logo_%281%29.png"
+                },
+                spender: {
+                    name: "ApeSwap",
+                    address: "0xcF0feBd3f17CEf5b47b0cD257aCf6025c5BFf3b7"
+                },
+                amount: "Unlimited",
+                date: "2023-03-10"
+            }
+        ];
+        
+        function checkApprovals() {
+            const address = document.getElementById('walletAddress').value;
+            if (!address || address.length < 20) {
+                alert("请输入有效的钱包地址");
+                return;
+            }
+            
+            displayApprovals(approvalsData);
+            document.getElementById('result').style.display = 'block';
+        }
+        
+        function displayApprovals(approvals) {
+            const container = document.getElementById('approvalsList');
+            container.innerHTML = '';
+            
+            if (approvals.length === 0) {
+                container.innerHTML = '<p>没有找到任何授权记录</p>';
+                return;
+            }
+            
+            approvals.forEach(approval => {
+                const item = document.createElement('div');
+                item.className = 'approval-item';
+                
+                item.innerHTML = `
+                    <div class="token-info">
+                        <img src="${approval.token.icon}" class="token-icon" alt="${approval.token.name}">
+                        <div>
+                            <div class="token-name">${approval.token.name} (${approval.token.symbol})</div>
+                            <div>${approval.token.address}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="approval-details">
+                        <div class="detail-item">
+                            <span class="detail-label">授权给:</span>
+                            <span class="detail-value">${approval.spender.name}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">合约地址:</span>
+                            <span class="detail-value">${approval.spender.address}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">授权数量:</span>
+                            <span class="detail-value">${approval.amount}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">授权日期:</span>
+                            <span class="detail-value">${approval.date}</span>
+                        </div>
+                        <button class="revoke-btn" onclick="revokeApproval('${approval.token.address}', '${approval.spender.address}')">撤销授权</button>
+                    </div>
+                `;
+                
+                container.appendChild(item);
+            });
+        }
+        
+        function revokeApproval(tokenAddress, spenderAddress) {
+            if (confirm("确定要撤销此授权吗？")) {
+                alert(`已发送撤销授权请求\n代币: ${tokenAddress}\n合约: ${spenderAddress}`);
+                // 实际应用中应调用钱包执行撤销交易
+            }
+        }
+    </script>
+</body>
+</html>
