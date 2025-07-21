@@ -1,1 +1,476 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>合约调试器</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'SF Mono', Monaco, monospace;
+        }
+        
+        body {
+            padding: 20px;
+            background-color: #1e1e1e;
+            color: #dcdcdc;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: #252526;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        header {
+            background: #007acc;
+            padding: 15px 20px;
+            color: white;
+        }
+        
+        h1 {
+            font-size: 20px;
+            font-weight: 600;
+        }
+        
+        .tabs {
+            display: flex;
+            background: #333333;
+            border-bottom: 1px solid #454545;
+        }
+        
+        .tab {
+            padding: 12px 20px;
+            cursor: pointer;
+            border-right: 1px solid #454545;
+        }
+        
+        .tab.active {
+            background: #1e1e1e;
+            color: #007acc;
+            border-bottom: 2px solid #007acc;
+        }
+        
+        .content {
+            padding: 20px;
+        }
+        
+        .panel {
+            display: none;
+        }
+        
+        .panel.active {
+            display: block;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #9cdcfe;
+        }
+        
+        input, textarea, select {
+            width: 100%;
+            padding: 10px;
+            background: #333333;
+            border: 1px solid #3c3c3c;
+            border-radius: 4px;
+            color: #dcdcdc;
+            font-family: 'SF Mono', Monaco, monospace;
+        }
+        
+        textarea {
+            min-height: 150px;
+            resize: vertical;
+        }
+        
+        .btn {
+            padding: 10px 15px;
+            background: #007acc;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        
+        .btn:hover {
+            background: #0062a3;
+        }
+        
+        .btn-secondary {
+            background: #3c3c3c;
+        }
+        
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            background: #333333;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        
+        .result-title {
+            margin-bottom: 10px;
+            color: #4ec9b0;
+        }
+        
+        pre {
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        
+        .function-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .input-group input {
+            flex: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>智能合约调试器</h1>
+        </header>
+        
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('read')">读取合约</div>
+            <div class="tab" onclick="switchTab('write')">写入合约</div>
+            <div class="tab" onclick="switchTab('events')">事件日志</div>
+            <div class="tab" onclick="switchTab('abi')">ABI工具</div>
+        </div>
+        
+        <div class="content">
+            <!-- 读取合约面板 -->
+            <div id="readPanel" class="panel active">
+                <div class="form-group">
+                    <label for="contractAddress">合约地址</label>
+                    <input type="text" id="contractAddress" placeholder="0x...">
+                </div>
+                
+                <div class="form-group">
+                    <label for="functionSelect">选择函数</label>
+                    <select id="functionSelect">
+                        <option value="balanceOf">balanceOf(address)</option>
+                        <option value="totalSupply">totalSupply()</option>
+                        <option value="name">name()</option>
+                        <option value="symbol">symbol()</option>
+                        <option value="decimals">decimals()</option>
+                    </select>
+                </div>
+                
+                <div class="form-group" id="argumentsGroup">
+                    <label for="argument1">参数</label>
+                    <input type="text" id="argument1" placeholder="输入参数值">
+                </div>
+                
+                <button class="btn" onclick="callFunction()">调用函数</button>
+                
+                <div class="result" id="readResult">
+                    <div class="result-title">调用结果</div>
+                    <pre id="callResult">等待调用...</pre>
+                </div>
+            </div>
+            
+            <!-- 写入合约面板 -->
+            <div id="writePanel" class="panel">
+                <div class="form-group">
+                    <label for="writeContractAddress">合约地址</label>
+                    <input type="text" id="writeContractAddress" placeholder="0x...">
+                </div>
+                
+                <div class="form-group">
+                    <label for="writeFunctionSelect">选择函数</label>
+                    <select id="writeFunctionSelect">
+                        <option value="approve">approve(address,uint256)</option>
+                        <option value="transfer">transfer(address,uint256)</option>
+                        <option value="transferFrom">transferFrom(address,address,uint256)</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>参数</label>
+                    <div class="input-group">
+                        <input type="text" id="writeArg1" placeholder="参数1">
+                        <input type="text" id="writeArg2" placeholder="参数2">
+                    </div>
+                    <div class="input-group">
+                        <input type="text" id="writeArg3" placeholder="参数3">
+                    </div>
+                </div>
+                
+                <button class="btn" onclick="sendTransaction()">发送交易</button>
+                
+                <div class="result" id="writeResult">
+                    <div class="result-title">交易结果</div>
+                    <pre id="txResult">等待交易发送...</pre>
+                </div>
+            </div>
+            
+            <!-- 事件日志面板 -->
+            <div id="eventsPanel" class="panel">
+                <div class="form-group">
+                    <label for="eventContractAddress">合约地址</label>
+                    <input type="text" id="eventContractAddress" placeholder="0x...">
+                </div>
+                
+                <div class="form-group">
+                    <label for="eventSelect">选择事件</label>
+                    <select id="eventSelect">
+                        <option value="Transfer">Transfer(address,address,uint256)</option>
+                        <option value="Approval">Approval(address,address,uint256)</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="eventFilter">过滤条件</label>
+                    <input type="text" id="eventFilter" placeholder="例如: from=0x...">
+                </div>
+                
+                <div class="form-group">
+                    <label for="blockRange">区块范围</label>
+                    <div class="input-group">
+                        <input type="text" id="fromBlock" placeholder="起始区块">
+                        <input type="text" id="toBlock" placeholder="结束区块">
+                    </div>
+                </div>
+                
+                <button class="btn" onclick="queryEvents()">查询事件</button>
+                
+                <div class="result" id="eventsResult">
+                    <div class="result-title">事件日志</div>
+                    <pre id="eventsList">等待查询结果...</pre>
+                </div>
+            </div>
+            
+            <!-- ABI工具面板 -->
+            <div id="abiPanel" class="panel">
+                <div class="form-group">
+                    <label for="abiInput">ABI JSON</label>
+                    <textarea id="abiInput" placeholder="粘贴合约ABI JSON..."></textarea>
+                </div>
+                
+                <button class="btn" onclick="parseABI()">解析ABI</button>
+                <button class="btn btn-secondary" onclick="generateInterface()">生成接口</button>
+                
+                <div class="result" id="abiResult">
+                    <div class="result-title">解析结果</div>
+                    <pre id="abiOutput">等待解析...</pre>
+                </div>
+            </div>
+        </div>
+    </div>
 
+    <script>
+        // 切换标签页
+        function switchTab(tabName) {
+            // 隐藏所有面板
+            document.querySelectorAll('.panel').forEach(panel => {
+                panel.classList.remove('active');
+            });
+            
+            // 移除所有标签的active类
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // 显示选中的面板
+            document.getElementById(tabName + 'Panel').classList.add('active');
+            
+            // 激活选中的标签
+            document.querySelectorAll('.tab').forEach(tab => {
+                if (tab.textContent.includes(getTabTitle(tabName))) {
+                    tab.classList.add('active');
+                }
+            });
+        }
+        
+        function getTabTitle(tabName) {
+            const titles = {
+                'read': '读取合约',
+                'write': '写入合约',
+                'events': '事件日志',
+                'abi': 'ABI工具'
+            };
+            return titles[tabName];
+        }
+        
+        // 调用合约函数
+        function callFunction() {
+            const contractAddress = document.getElementById('contractAddress').value;
+            const functionName = document.getElementById('functionSelect').value;
+            
+            if (!contractAddress) {
+                alert("请输入合约地址");
+                return;
+            }
+            
+            // 模拟调用结果
+            const results = {
+                'balanceOf': '1000.0',
+                'totalSupply': '100000000.0',
+                'name': '"Binance USD"',
+                'symbol': '"BUSD"',
+                'decimals': '18'
+            };
+            
+            document.getElementById('callResult').textContent = results[functionName];
+        }
+        
+        // 发送交易
+        function sendTransaction() {
+            const contractAddress = document.getElementById('writeContractAddress').value;
+            
+            if (!contractAddress) {
+                alert("请输入合约地址");
+                return;
+            }
+            
+            document.getElementById('txResult').textContent = "交易已发送!\n交易哈希: 0x9b7b...d82f\n等待确认...";
+            
+            // 模拟交易确认
+            setTimeout(() => {
+                document.getElementById('txResult').textContent = "交易已确认!\n区块: #256789\nGas消耗: 52100\n状态: 成功";
+            }, 2000);
+        }
+        
+        // 查询事件
+        function queryEvents() {
+            const contractAddress = document.getElementById('eventContractAddress').value;
+            
+            if (!contractAddress) {
+                alert("请输入合约地址");
+                return;
+            }
+            
+            // 模拟事件数据
+            const events = `[
+                {
+                    "blockNumber": 256781,
+                    "transactionHash": "0x9b7b...d82f",
+                    "event": "Transfer",
+                    "args": {
+                        "from": "0xAb58...a3F2",
+                        "to": "0x7d3C...b8A1",
+                        "value": "500.0"
+                    }
+                },
+                {
+                    "blockNumber": 256775,
+                    "transactionHash": "0x4c2a...e91d",
+                    "event": "Transfer",
+                    "args": {
+                        "from": "0x7d3C...b8A1",
+                        "to": "0xAb58...a3F2",
+                        "value": "250.0"
+                    }
+                }
+            ]`;
+            
+            document.getElementById('eventsList').textContent = events;
+        }
+        
+        // 解析ABI
+        function parseABI() {
+            const abiInput = document.getElementById('abiInput').value;
+            
+            if (!abiInput) {
+                alert("请输入ABI JSON");
+                return;
+            }
+            
+            try {
+                const abi = JSON.parse(abiInput);
+                let output = "ABI解析成功:\n\n";
+                
+                // 统计函数类型
+                const functionTypes = {
+                    'function': 0,
+                    'event': 0,
+                    'constructor': 0,
+                    'fallback': 0
+                };
+                
+                abi.forEach(item => {
+                    if (functionTypes.hasOwnProperty(item.type)) {
+                        functionTypes[item.type]++;
+                    }
+                });
+                
+                // 添加统计信息
+                output += `函数类型统计:\n`;
+                output += `- 普通函数: ${functionTypes.function}\n`;
+                output += `- 事件: ${functionTypes.event}\n`;
+                output += `- 构造函数: ${functionTypes.constructor}\n`;
+                output += `- Fallback函数: ${functionTypes.fallback}\n\n`;
+                
+                // 添加函数详情
+                output += `函数详情:\n`;
+                abi.filter(item => item.type === 'function').forEach(func => {
+                    output += `- ${func.name}(${func.inputs.map(input => input.type).join(', ')})\n`;
+                });
+                
+                document.getElementById('abiOutput').textContent = output;
+            } catch (e) {
+                document.getElementById('abiOutput').textContent = "ABI解析失败: " + e.message;
+            }
+        }
+        
+        // 生成接口
+        function generateInterface() {
+            const abiInput = document.getElementById('abiInput').value;
+            
+            if (!abiInput) {
+                alert("请输入ABI JSON");
+                return;
+            }
+            
+            try {
+                const abi = JSON.parse(abiInput);
+                let interface = "// 合约接口\n";
+                interface += `interface IContract {\n`;
+                
+                // 添加函数
+                abi.filter(item => item.type === 'function').forEach(func => {
+                    const inputs = func.inputs.map(input => `${input.name}: ${input.type}`).join(', ');
+                    const outputs = func.outputs ? `: ${func.outputs.map(output => output.type).join(', ')}` : '';
+                    
+                    interface += `    function ${func.name}(${inputs}) external${outputs};\n`;
+                });
+                
+                // 添加事件
+                abi.filter(item => item.type === 'event').forEach(event => {
+                    const inputs = event.inputs.map(input => `${input.name} ${input.type}`).join(', ');
+                    interface += `    event ${event.name}(${inputs});\n`;
+                });
+                
+                interface += "}";
+                
+                document.getElementById('abiOutput').textContent = interface;
+            } catch (e) {
+                document.getElementById('abiOutput').textContent = "生成接口失败: " + e.message;
+            }
+        }
+    </script>
+</body>
+</html>
