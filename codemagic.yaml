@@ -1,42 +1,27 @@
-# iOS项目专用配置文件
-workflows:
-  ios-production:
-    name: iOS Production Build
-    environment:
-      # ✅ 关键修复：显式声明项目类型
-      project_type: ios
-      
-      # ⚙️ Xcode配置
-      xcode: latest
-      cocoapods: default
-      node: 18.0.0
-      
-      # 🔠 中文路径强制修复
-      vars:
-        LANG: "en_US.UTF-8"
-        LC_ALL: "en_US.UTF-8"
-    
-    # 📁 精确项目路径配置
-    ios:
-      project: "ios/Runner.xcodeproj"  # 🚨 替换为实际项目路径
-      scheme: "Runner"                 # 🚨 替换为实际scheme名
-    
-    scripts:
-      # 📚 依赖安装
-      - cd ios
-      - pod install
-      
-      # 🔨 签名与构建
-      - xcodebuild build -project Runner.xcodeproj -scheme Runner -sdk iphoneos
-      - xcodebuild archive -project Runner.xcodeproj -scheme Runner -archivePath build/Runner.xcarchive
-      - xcodebuild -exportArchive -archivePath build/Runner.xcarchive -exportOptionsPlist ExportOptions.plist -exportPath build
-    
-    # 📦 生成IPA文件
-    artifacts:
-      - build/*.ipa
-      
-    # 📲 发布到App Store Connect
-    publishing:
-      app_store_connect:
-        api_key: $APP_STORE_CONNECT_API_KEY
-        apple_id: $APPLE_DEVELOPER_ACCOUNT
+#!/bin/bash
+# ===== 1. 获取上传凭证 =====
+RESPONSE=$(curl -X POST \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $CM_API_KEY" \
+  -d '{
+    "appId": "'$CM_APP_ID'",
+    "workflowId": "'$CM_WORKFLOW_ID'",
+    "branch": "main",
+    "environment": { 
+      "variables": {
+        "IOS_SIGNING_TYPE": "development"
+      }
+    }
+  }' \
+  "https://api.codemagic.io/builds"
+)
+
+# ===== 2. 提取构建ID =====
+BUILD_ID=$(echo $RESPONSE | jq -r '.buildId')
+echo "构建已启动，ID: $BUILD_ID"
+
+# ===== 3. 上传IPA文件（无需配置） =====
+curl -X POST \
+  -H "Authorization: Bearer $CM_API_KEY" \
+  -F "file=@/path/to/YourApp.ipa" \
+  "https://api.codemagic.io/builds/$BUILD_ID/artifacts"
