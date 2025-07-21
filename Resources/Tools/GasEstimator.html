@@ -1,1 +1,265 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BSC Gas 估算器</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+        
+        body {
+            padding: 20px;
+            background-color: #f5f5f7;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            overflow: hidden;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #f0b90b 0%, #f8d12f 100%);
+            padding: 20px;
+            text-align: center;
+            color: white;
+        }
+        
+        h1 {
+            font-size: 22px;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        
+        .subtitle {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 20px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            font-size: 16px;
+        }
+        
+        select, input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: 12px;
+            font-size: 16px;
+            background: #fafafa;
+        }
+        
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            background: #f0b90b;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 17px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .btn:hover {
+            background: #e0a800;
+        }
+        
+        .result {
+            margin-top: 25px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            display: none;
+        }
+        
+        .result-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #f0b90b;
+        }
+        
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .result-item:last-child {
+            border-bottom: none;
+        }
+        
+        .result-label {
+            font-weight: 500;
+        }
+        
+        .result-value {
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .highlight {
+            color: #f0b90b;
+            font-size: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>BSC Gas 估算器</h1>
+            <div class="subtitle">实时计算 Binance Smart Chain 交易费用</div>
+        </header>
+        
+        <div class="content">
+            <div class="form-group">
+                <label for="network">网络选择</label>
+                <select id="network">
+                    <option value="testnet">测试网 (BSC Testnet)</option>
+                    <option value="mainnet">主网 (BSC Mainnet)</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="txType">交易类型</label>
+                <select id="txType">
+                    <option value="transfer">代币转账</option>
+                    <option value="swap">代币兑换</option>
+                    <option value="contract">合约交互</option>
+                    <option value="nft">NFT 交易</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="gasPrice">Gas Price (Gwei)</label>
+                <input type="number" id="gasPrice" placeholder="输入自定义Gas价格" min="5">
+                <small style="display:block; margin-top:5px; color:#666">留空使用当前网络建议价格</small>
+            </div>
+            
+            <button class="btn" onclick="calculateGas()">计算 Gas 费用</button>
+            
+            <div class="result" id="result">
+                <div class="result-title">费用估算结果</div>
+                
+                <div class="result-item">
+                    <span class="result-label">当前 Gas 价格</span>
+                    <span class="result-value" id="gasPriceResult">-</span>
+                </div>
+                
+                <div class="result-item">
+                    <span class="result-label">预估 Gas 用量</span>
+                    <span class="result-value" id="gasLimit">-</span>
+                </div>
+                
+                <div class="result-item">
+                    <span class="result-label">交易费用 (BNB)</span>
+                    <span class="result-value" id="feeBNB">-</span>
+                </div>
+                
+                <div class="result-item">
+                    <span class="result-label">交易费用 (USD)</span>
+                    <span class="result-value" id="feeUSD">-</span>
+                </div>
+                
+                <div class="result-item">
+                    <span class="result-label">总费用</span>
+                    <span class="result-value highlight" id="totalFee">-</span>
+                </div>
+            </div>
+        </div>
+    </div>
 
+    <script>
+        // 网络建议Gas价格
+        const suggestedGasPrices = {
+            testnet: { low: 5, medium: 7, high: 10 },
+            mainnet: { low: 5, medium: 6, high: 8 }
+        };
+        
+        // 不同交易类型的Gas Limit
+        const gasLimits = {
+            transfer: 21000,
+            swap: 150000,
+            contract: 300000,
+            nft: 250000
+        };
+        
+        // BNB价格 (示例值)
+        const bnbPrices = {
+            testnet: 300,
+            mainnet: 400
+        };
+        
+        function calculateGas() {
+            const network = document.getElementById('network').value;
+            const txType = document.getElementById('txType').value;
+            let gasPrice = parseFloat(document.getElementById('gasPrice').value);
+            
+            // 使用建议Gas价格
+            if (!gasPrice || gasPrice < 1) {
+                gasPrice = suggestedGasPrices[network].medium;
+            }
+            
+            const gasLimit = gasLimits[txType];
+            const feeBNB = (gasPrice * gasLimit) / 1e9;
+            const feeUSD = feeBNB * bnbPrices[network];
+            
+            // 显示结果
+            document.getElementById('gasPriceResult').textContent = `${gasPrice} Gwei`;
+            document.getElementById('gasLimit').textContent = gasLimit.toLocaleString();
+            document.getElementById('feeBNB').textContent = feeBNB.toFixed(6) + ' BNB';
+            document.getElementById('feeUSD').textContent = '$' + feeUSD.toFixed(2);
+            document.getElementById('totalFee').textContent = '$' + feeUSD.toFixed(2);
+            
+            // 显示结果区域
+            document.getElementById('result').style.display = 'block';
+            
+            // 更新当前网络状态
+            updateNetworkStatus(network);
+        }
+        
+        function updateNetworkStatus(network) {
+            const status = network === 'testnet' ? '测试网' : '主网';
+            const color = network === 'testnet' ? '#10b981' : '#f0b90b';
+            
+            // 更新标题
+            document.querySelector('h1').textContent = `BSC Gas 估算器 (${status})`;
+            document.querySelector('header').style.background = `linear-gradient(135deg, ${color} 0%, ${color}90 100%)`;
+        }
+        
+        // 初始化页面
+        document.addEventListener('DOMContentLoaded', function() {
+            // 设置默认值
+            document.getElementById('network').value = 'testnet';
+            document.getElementById('txType').value = 'transfer';
+            
+            // 初始计算
+            calculateGas();
+        });
+    </script>
+</body>
+</html>
