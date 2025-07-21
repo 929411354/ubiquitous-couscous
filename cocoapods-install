@@ -1,11 +1,6 @@
-- script:
+- cocoapods-install:
     inputs:
-    - content: |
-        #!/bin/bash
-        cd $BITRISE_SOURCE_DIR/ios
-        ruby validate_podfile.rb
-- script:
-    inputs:
-    - content: |
-        iconv -f UTF-8 -t ASCII//TRANSLIT ios/Podfile > ios/Podfile.ascii
-        mv ios/Podfile.ascii ios/Podfile
+    - project_path: "$BITRISE_SOURCE_DIR/ios"
+    - is_update_cocoapods: false
+    - install_cocoapods_version: "specific"
+    - cocoapods_version: "2.4.2"
