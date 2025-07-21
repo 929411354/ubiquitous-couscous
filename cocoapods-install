@@ -1,0 +1,7 @@
+# 根据截图配置（适配中文项目名）
+- cocoapods-install:
+    inputs:
+      - project_path: "$BITRISE_SOURCE_DIR/ios"  # 关键路径配置！
+      - is_update_cocoapods: "true"
+      - install_cocoapods_version: "specific"
+      - cocoapods_version: "2.4.2"  # 匹配截图中的2.4.2版本
