@@ -2,7 +2,6 @@
 # === 正确配置参数 ===
 export CM_API_KEY="YRAU6tGcqouHDJ-AmbQi8A-aoU1pHsDMMR3ZQUJalSI"
 export CM_APP_ID="687e3ce724817b83deea48d7"      # 来自您的链接
-export CM_WORKFLOW_ID="ios-workflow"            # 需要进入Workflow设置确认
 export IPA_PATH="build/ios/ipa/Runner.ipa"      # Flutter默认IPA路径
 
 # === 修复JSON语法错误 ===
