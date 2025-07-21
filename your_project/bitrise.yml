@@ -1,0 +1,11 @@
+format_version: "13"  # Bitrise配置格式版本
+default_step_lib_source: https://github.com/bitrise-io/bitrise-steplib.git
+project_type: ios      # 项目类型
+
+workflows:
+primary:             # 主工作流
+  steps:
+  - script:
+      inputs:
+      - content: "echo 'Hello Bitrise'"
+  # 其他步骤...
