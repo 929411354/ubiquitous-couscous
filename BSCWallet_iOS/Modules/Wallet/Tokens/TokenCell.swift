@@ -5,7 +5,6 @@ class TokenCell: UITableViewCell {
     @IBOutlet weak var symbolLabel: UILabel!
     @IBOutlet weak var nameLabel: UILabel!
     @IBOutlet weak var balanceLabel: UILabel!
-    @IBOutlet weak var valueLabel: UILabel!
     
     func configure(with token: Token) {
         symbolLabel.text = token.symbol
@@ -23,8 +22,7 @@ class TokenCell: UITableViewCell {
         iconView.layer.cornerRadius = 12
         iconView.layer.masksToBounds = true
         
-        // 显示余额和估值
+        // 显示余额
         balanceLabel.text = "\(token.balance) \(token.symbol)"
-        valueLabel.text = "$\(token.value)"
     }
 }
