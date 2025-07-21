@@ -1,45 +1,24 @@
+# codemagic.yaml - iOS配置参考
 workflows:
-  my-workflow:
-    name: My Workflow
+  ios-workflow:
+    name: iOS Build
     environment:
-      vars:
-        CM_API_KEY: $CM_API_KEY
-        CM_APP_ID: $CM_APP_ID
-        CM_WORKFLOW_ID: $CM_WORKFLOW_ID   # 或者直接写死
-        IPA_PATH: $IPA_PATH   # 这些变量可以在Codemagic的环境变量中设置
+      xcode: latest
+      cocoapods: default
+      node: 18
     scripts:
-      - name: Build and Upload
+      - name: 安装依赖
         script: |
-          RESPONSE=$(curl -X POST \
-            -H "Content-Type: application/json" \
-            -H "Authorization: Bearer $CM_API_KEY" \
-            -d '{
-              "appId": "'"$CM_APP_ID"'",
-              "workflowId": "'"$CM_WORKFLOW_ID"'",
-              "branch": "main",
-              "environment": {
-                "variables": {
-                  "IOS_SIGNING_TYPE": "development"
-                }
-              }
-            }' \
-            "https://api.codemagic.io/builds"
-          )
-
-          BUILD_ID=$(echo "$RESPONSE" | jq -r '.buildId')
-
-          if [ -z "$BUILD_ID" ] || [ "$BUILD_ID" = "null" ]; then
-            echo "❌ 构建启动失败! 错误信息:"
-            echo "$RESPONSE" | jq .
-            exit 1
-          fi
-
-          echo "✅ 构建已启动! ID: $BUILD_ID"
-          echo "👉 查看构建状态: https://codemagic.io/app/$CM_APP_ID/build/$BUILD_ID"
-
-          curl -X POST \
-            -H "Authorization: Bearer $CM_API_KEY" \
-            -F "file=@$IPA_PATH" \
-            "https://api.codemagic.io/builds/$BUILD_ID/artifacts"
-
-          echo "✅ IPA文件上传完成"
+          cd ios
+          pod install
+          cd ..
+      - name: 构建IPA
+        script: |
+          flutter build ipa --export-method development
+    artifacts:
+      - build/ios/ipa/*.ipa
+    publishing:
+      app_store_connect:
+        api_key: $APP_STORE_CONNECT_API_KEY
+        key_id: $APP_STORE_KEY_ID
+        issuer_id: $APP_STORE_ISSUER_ID
