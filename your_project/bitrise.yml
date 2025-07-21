@@ -1,11 +1,20 @@
-format_version: "13"  # Bitrise配置格式版本
-default_step_lib_source: https://github.com/bitrise-io/bitrise-steplib.git
-project_type: ios      # 项目类型
-
 workflows:
-primary:             # 主工作流
-  steps:
-  - script:
-      inputs:
-      - content: "echo 'Hello Bitrise'"
-  # 其他步骤...
+  primary:
+    steps:
+    - activate-ssh-key: {...}
+    - git-clone: {...}
+    - script:   # 添加的修复步骤
+        title: 修复Podfile语法
+        inputs:
+        - content: |
+            chmod +x scripts/fix_podfile.sh
+            ./scripts/fix_podfile.sh
+            echo "=== 修复后内容 ==="
+            cat ios/Podfile
+    - cocoapods-install:  # 关键修改点
+        inputs:
+        - project_path: "$BITRISE_SOURCE_DIR/ios"
+        - is_update_cocoapods: false
+        - install_cocoapods_version: "specific"
+        - cocoapods_version: "2.4.2"
+    - deploy-to-bitrise-io: {...}
