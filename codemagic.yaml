@@ -1,13 +1,19 @@
 #!/bin/bash
-# ===== 1. 获取上传凭证 =====
+# === 正确配置参数 ===
+export CM_API_KEY="YRAU6tGcqouHDJ-AmbQi8A-aoU1pHsDMMR3ZQUJalSI"
+export CM_APP_ID="687e3ce724817b83deea48d7"      # 来自您的链接
+export CM_WORKFLOW_ID="ios-workflow"            # 需要进入Workflow设置确认
+export IPA_PATH="build/ios/ipa/Runner.ipa"      # Flutter默认IPA路径
+
+# === 修复JSON语法错误 ===
 RESPONSE=$(curl -X POST \
-  -H "Content-Type: application/json" \
+  -H "Content-Type: application/json" \  # ✅ 大写H，正确引号
   -H "Authorization: Bearer $CM_API_KEY" \
   -d '{
-    "appId": "'$CM_APP_ID'",
-    "workflowId": "'$CM_WORKFLOW_ID'",
+    "appId": "'"$CM_APP_ID"'",
+    "workflowId": "'"$CM_WORKFLOW_ID"'",
     "branch": "main",
-    "environment": { 
+    "environment": {
       "variables": {
         "IOS_SIGNING_TYPE": "development"
       }
@@ -16,12 +22,23 @@ RESPONSE=$(curl -X POST \
   "https://api.codemagic.io/builds"
 )
 
-# ===== 2. 提取构建ID =====
-BUILD_ID=$(echo $RESPONSE | jq -r '.buildId')
-echo "构建已启动，ID: $BUILD_ID"
+# === 处理JSON响应 ===
+BUILD_ID=$(echo "$RESPONSE" | jq -r '.buildId')
 
-# ===== 3. 上传IPA文件（无需配置） =====
+# === 增强错误处理 ===
+if [ -z "$BUILD_ID" ] || [ "$BUILD_ID" = "null" ]; then
+  echo "❌ 构建启动失败! 错误信息:"
+  echo "$RESPONSE" | jq .
+  exit 1
+fi
+
+echo "✅ 构建已启动! ID: $BUILD_ID"
+echo "👉 查看构建状态: https://codemagic.io/app/$CM_APP_ID/build/$BUILD_ID"
+
+# === 上传IPA ===
 curl -X POST \
   -H "Authorization: Bearer $CM_API_KEY" \
-  -F "file=@/path/to/YourApp.ipa" \
+  -F "file=@$IPA_PATH" \
   "https://api.codemagic.io/builds/$BUILD_ID/artifacts"
+
+echo "✅ IPA文件上传完成"
