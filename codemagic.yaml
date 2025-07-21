@@ -1,0 +1,45 @@
+# codemagic.yaml
+workflows:
+  flutter-workflow:
+    name: Flutter Build
+    environment:
+      flutter: "3.19.5"  # 指定Flutter版本
+      xcode: latest
+      cocoapods: default
+    
+    # 🚫 关键修复：显式声明项目类型
+    project_type: flutter
+    
+    scripts:
+      # 🔧 解决中文路径冲突
+      - export LANG=en_US.UTF-8
+      - export LC_ALL=en_US.UTF-8
+      
+      # 📦 依赖安装
+      - flutter pub get
+      - flutter clean
+      
+      # ⚙️ 构建配置
+      - flutter build apk --release --target-platform android-arm64
+      - flutter build ipa --export-options-plist ios/ExportOptions.plist
+    
+    # 📱 生成安卓APK
+    artifacts:
+      - build/**/outputs/**/*.apk
+    
+    # 📱 生成iOS IPA
+    publishing:
+      app_store_connect:
+        api_key: $APP_STORE_CONNECT_API_KEY
+      email:
+        recipients:
+          - your_email@example.com
+
+# 🔐 签名配置（根据项目类型二选一）
+android_signing:
+  type: google_play  # 或 manual
+  # 配置内容...
+
+ios_signing:
+  distribution_type: app_store  # 或 development/ad_hoc
+  # 配置内容...
