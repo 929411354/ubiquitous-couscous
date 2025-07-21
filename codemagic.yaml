@@ -1,0 +1,16 @@
+# codemagic.yaml
+workflows:
+  ios-workflow:   # 工作流名称
+    name: iOS Workflow
+    environment:
+      xcode: latest
+    scripts:
+      - name: Install dependencies
+        script: | 
+          brew install cocoapods
+          pod install
+      - name: Build IPA
+        script: | 
+          xcodebuild build -workspace MyApp.xcworkspace -scheme MyApp -destination 'generic/platform=iOS'
+    artifacts:
+      - build/*.ipa
