@@ -1,11 +1,9 @@
 import UIKit
-import LocalAuthentication
 
 class WalletCreationVC: UIViewController {
     @IBOutlet weak var passwordField: UITextField!
     @IBOutlet weak var confirmPasswordField: UITextField!
     @IBOutlet weak var createButton: UIButton!
-    @IBOutlet weak var importButton: UIButton!
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -16,7 +14,6 @@ class WalletCreationVC: UIViewController {
         passwordField.isSecureTextEntry = true
         confirmPasswordField.isSecureTextEntry = true
         createButton.layer.cornerRadius = 8
-        importButton.layer.cornerRadius = 8
     }
     
     @IBAction func createWalletTapped() {
@@ -43,18 +40,11 @@ class WalletCreationVC: UIViewController {
         showLoadingIndicator()
         
         DispatchQueue.global(qos: .userInitiated).async {
-            do {
-                let wallet = try WalletManager.shared.createWallet(password: password)
-                
-                DispatchQueue.main.async {
-                    self.hideLoadingIndicator()
-                    self.showSuccessAlert(walletAddress: wallet.address)
-                }
-            } catch {
-                DispatchQueue.main.async {
-                    self.hideLoadingIndicator()
-                    self.showAlert(title: "创建失败", message: error.localizedDescription)
-                }
+            let wallet = WalletManager.shared.createWallet()
+            
+            DispatchQueue.main.async {
+                self.hideLoadingIndicator()
+                self.showSuccessAlert(walletAddress: wallet.address)
             }
         }
     }
@@ -71,10 +61,5 @@ class WalletCreationVC: UIViewController {
         })
         
         present(alert, animated: true)
-    }
-    
-    @IBAction func importWalletTapped() {
-        let importVC = ImportWalletVC()
-        navigationController?.pushViewController(importVC, animated: true)
     }
 }
