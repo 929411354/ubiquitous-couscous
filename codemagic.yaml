@@ -1,16 +1,38 @@
-# codemagic.yaml
+# ====== codemagic.yaml ======
 workflows:
-  ios-workflow:   # 工作流名称
-    name: iOS Workflow
+  ios-workflow:
+    name: iOS Build
     environment:
       xcode: latest
+      cocoapods: default
+      node: 18
     scripts:
-      - name: Install dependencies
-        script: | 
-          brew install cocoapods
+      # ✅ 修复点1：替换所有非断空格为正常空格
+      - name: 安装依赖
+        script: |  # <-- 这里只保留 |，后面直接换行
+          cd ios
           pod install
-      - name: Build IPA
-        script: | 
-          xcodebuild build -workspace MyApp.xcworkspace -scheme MyApp -destination 'generic/platform=iOS'
+          cd ..
+          
+      # ✅ 修复点2：正确缩进
+      - name: 构建IPA
+        script: |  # <-- 这里只保留 |，后面直接换行
+          flutter build ipa \
+            --export-method development \
+            --target lib/main.dart
     artifacts:
-      - build/*.ipa
+      - build/ios/ipa/*.ipa
+    publishing:
+      app_store_connect:
+        api_key: $APP_STORE_CONNECT_API_KEY
+        key_id: $APP_STORE_KEY_ID
+        issuer_id: $APP_STORE_ISSUER_ID
+
+# ====== 特殊工具 ======
+# 在提交前运行此命令清除非断空格
+pre-hooks:
+  - name: 清理隐藏字符
+    script: |
+      # 查找并替换所有非断空格
+      find . -name "*.yaml" -exec sed -i '' $'s/\xa0/ /g' {} +
+      echo "✅ 所有非断空格已清除"
